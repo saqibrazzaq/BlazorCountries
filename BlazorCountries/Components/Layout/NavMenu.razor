@@ -1,0 +1,19 @@
+﻿@rendermode InteractiveServer
+
+<div class="navmenu">
+  <input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon" />
+  <label for="navmenu-toggle" class="navmenu-icon"><FluentIcon Value="@(new Icons.Regular.Size20.Navigation())" Color="Color.Fill" /></label>
+  <nav class="sitenav" aria-labelledby="main-menu" onclick="document.getElementById('navmenu-toggle').click();">
+    <FluentNavMenu Id="main-menu" Collapsible="true" Width="250" Title="Navigation menu" @bind-Expanded="expanded">
+      <FluentNavLink Href="/" Match="NavLinkMatch.All" Icon="@(new Icons.Regular.Size20.Home())" >Home</FluentNavLink>
+      <FluentNavGroup Title="Settings" Icon="@(new Icons.Regular.Size20.Settings())">
+        <FluentNavLink Href="countries" Icon="@(new Icons.Regular.Size20.WeatherPartlyCloudyDay())">Countries</FluentNavLink>
+        <FluentNavLink Href="counter" Icon="@(new Icons.Regular.Size20.WeatherPartlyCloudyDay())">Counter</FluentNavLink>
+      </FluentNavGroup>
+    </FluentNavMenu>
+  </nav>
+</div>
+
+@code {
+  private bool expanded = true;
+}
