@@ -1,10 +1,67 @@
 ﻿@page "/countries"
 @rendermode InteractiveServer
+@inject ICountryService CountryService
+@inject IDialogService DialogService
+@inject IToastService ToastService
+@inject NavigationManager NavigationManager
 
 <PageTitle>Countries</PageTitle>
 
 <h1>Countries</h1>
 
-@code {
+<FluentAnchor Href="/countries/new" Appearance="Appearance.Accent">Add New Country</FluentAnchor>
 
+<FluentDataGrid ItemsProvider="itemsProvider" Pagination="@pagination">
+    <TemplateColumn Title="Name" Sortable="true">
+        <FluentAnchor Href=@($"/countries/{context.id}/edit") Appearance="Appearance.Hypertext">@context.name</FluentAnchor>
+    </TemplateColumn>
+  <PropertyColumn Title="Code" Property="@(p => p.code)" Sortable="true" />
+  <TemplateColumn Title="Actions" Align="@Align.End">
+    <FluentAnchor Href=@($"/countries/{context.id}/edit")>
+      <FluentIcon Value="@(new Icons.Regular.Size16.Edit())" />
+    </FluentAnchor>
+      <FluentButton IconEnd="@(new Icons.Regular.Size16.Delete())" OnClick="@((async) => DeleteCountry(context))" Appearance="Appearance.Outline" />
+  </TemplateColumn>
+</FluentDataGrid>
+
+<FluentPaginator State="@pagination" />
+
+@code {
+  private List<Country>? countries;
+  private int countryCount;
+  private CountrySearchReq dto = new();
+  GridItemsProvider<Country>? itemsProvider;
+
+  PaginationState pagination = new PaginationState { ItemsPerPage = Constants.PageSize };
+
+  protected override async Task OnInitializedAsync()
+  {
+    itemsProvider = async req =>
+    {
+      dto.Skip = req.StartIndex;
+      dto.Take = req.Count ?? Constants.PageSize;
+      dto.SortOrder = req.SortByAscending ? Constants.Ascending : Constants.Descending;
+      dto.OrderBy = req.SortByColumn?.Title;
+        SearchCountries();
+      return GridItemsProviderResult.From(countries, countryCount);
+    };
+  }
+  private void SearchCountries()
+  {
+    var searchResults = CountryService.Search(dto);
+    countries = searchResults.Items;
+    countryCount = searchResults.Count;
+  }
+  async Task DeleteCountry(Country context)
+  {
+    Console.WriteLine("Delete " + context.name);
+    var dialog = await DialogService.ShowConfirmationAsync($"Do you want to DELETE {context.name}?", "YES, I WANT TO DELETE", "No", "Delete Country");
+    var result = await dialog.Result;
+    if (!result.Cancelled)
+    {
+      await CountryService.DeleteAsync(context);
+      ToastService.ShowSuccess("Country deleted");
+      SearchCountries();
+    }
+  }
 }

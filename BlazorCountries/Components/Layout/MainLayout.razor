@@ -17,6 +17,8 @@
         <FluentSpacer />
         <a href="https://learn.microsoft.com/en-us/aspnet/core/blazor" target="_blank">About Blazor</a>
     </FluentFooter>
+  <FluentDialogProvider @rendermode="RenderMode.InteractiveServer" />
+  <FluentToastProvider @rendermode="RenderMode.InteractiveServer" MaxToastCount="10" />
 </FluentLayout>
 
 <div id="blazor-error-ui">
@@ -26,5 +28,4 @@
 </div>
 
 <FluentDesignTheme StorageName="theme" OfficeColor="OfficeColor.Default" />
-<FluentDialogProvider />
-<FluentToastProvider MaxToastCount="10" />
+

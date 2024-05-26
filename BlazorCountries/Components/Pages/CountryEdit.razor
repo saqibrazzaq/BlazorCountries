@@ -1,0 +1,58 @@
+﻿@page "/countries/new"
+@page "/countries/{CountryId}/edit"
+@rendermode InteractiveServer
+@inject ICountryService CountryService
+@inject IToastService ToastService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit Country</PageTitle>
+
+<h1>@(string.IsNullOrEmpty(CountryId) ? "Add New" : "Edit") Country</h1>
+
+<EditForm Model="@country" OnValidSubmit="@HandleValidSubmit" novalidate>
+  <DataAnnotationsValidator />
+  <FluentValidationSummary />
+
+  <FluentStack Orientation="Orientation.Vertical">
+    <div>
+      <FluentTextField Name="identifier" @bind-Value="country.code" Label="Code" Required />
+      <FluentValidationMessage For="@(() => country.code)" />
+    </div>
+    <div>
+      <FluentTextField Name="name" @bind-Value="country.name" Label="Name" Required />
+      <FluentValidationMessage For="@(() => country.name)" />
+    </div>
+    <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">Submit</FluentButton>
+  </FluentStack>
+</EditForm>
+
+@code {
+  [Parameter]
+  public string? CountryId { get; set; }
+  [SupplyParameterFromForm]
+  private Country? country { get; set; } = new();
+
+  protected override void OnInitialized()
+  {
+    LoadCountry();
+  }
+  void LoadCountry()
+  {
+    if (CountryId is null) return;
+
+    country = CountryService.Get(CountryId);
+  }
+  private async Task HandleValidSubmit()
+  {
+    if (string.IsNullOrEmpty(CountryId))
+    {
+      var newItem = await CountryService.AddAsync(country);
+    }
+    else
+    {
+      await CountryService.UpdateAsync(country);
+    }
+    ToastService.ShowSuccess("Country updated.");
+    NavigationManager.NavigateTo("/countries");
+  }
+}

@@ -1,4 +1,5 @@
 using BlazorCountries.Components;
+using BlazorCountries.Extensions;
 using Microsoft.FluentUI.AspNetCore.Components;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,6 +8,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddFluentUIComponents();
+builder.Services.LoadEnvironmentVariables();
+builder.Services.ConfigureCosmosDb(builder.Configuration);
 
 var app = builder.Build();
 
