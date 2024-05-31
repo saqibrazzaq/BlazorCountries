@@ -1,0 +1,107 @@
+﻿@page "/persons/new"
+@page "/persons/{PersonId}/edit"
+@rendermode InteractiveServer
+@inject IToastService ToastService
+@inject NavigationManager NavigationManager
+@inject IPersonService PersonService
+@inject IDialogService DialogService
+
+<PageTitle>@(string.IsNullOrEmpty(PersonId) ? "Add New" : "Edit") Person</PageTitle>
+
+<h1>@(string.IsNullOrEmpty(PersonId) ? "Add New" : "Edit") Person</h1>
+
+<EditForm Model="@person" OnValidSubmit="@HandleValidSubmit" novalidate>
+  <DataAnnotationsValidator />
+  <FluentValidationSummary />
+
+  <FluentStack Orientation="Orientation.Vertical">
+    <div>
+      <FluentTextField @bind-Value="person.firstName" Label="First Name" Required />
+      <FluentValidationMessage For="@(() => person.firstName)" />
+    </div>
+    <div>
+      <FluentTextField @bind-Value="person.lastName" Label="Last Name" Required />
+      <FluentValidationMessage For="@(() => person.lastName)" />
+    </div>
+    <div>
+        <FluentTextField @bind-Value="person.phone" Label="Phone" />
+    </div>
+    <div>
+        <FluentTextField @bind-Value="person.email" Label="Email" Required />
+        <FluentValidationMessage For="@(() => person.email)" />
+    </div>
+    <FluentStack Orientation="Orientation.Horizontal">
+        <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">Submit</FluentButton>
+        <FluentAnchor Href="/persons">Back</FluentAnchor>
+    </FluentStack>
+  </FluentStack>
+</EditForm>
+
+<hr />
+
+<h3>Addresses</h3>
+
+<FluentAnchor Href=@($"/persons/{PersonId}/addresses/new") Appearance="Appearance.Accent">Add New Address</FluentAnchor>
+
+<FluentDataGrid Items="person.addresses.AsQueryable()" Pagination="@pagination">
+  <TemplateColumn Title="Address">
+    <FluentAnchor Href=@($"/persons/{PersonId}/addresses/{context.id}/edit") Appearance="Appearance.Hypertext">@context.line1</FluentAnchor>
+  </TemplateColumn>
+  <TemplateColumn>
+      <FluentLabel>@context.line2</FluentLabel>
+      <FluentLabel>@context.city, @context.state</FluentLabel>
+    <FluentLabel>@context.country</FluentLabel>
+  </TemplateColumn>
+  <TemplateColumn Title="Actions" Align="@Align.End">
+    <FluentAnchor Href=@($"/persons/{PersonId}/addresses/{context.id}/edit")>
+      <FluentIcon Value="@(new Icons.Regular.Size16.Edit())" />
+    </FluentAnchor>
+    <FluentButton IconEnd="@(new Icons.Regular.Size16.Delete())" OnClick="@((async) => DeleteAddress(context))" Appearance="Appearance.Outline" />
+  </TemplateColumn>
+</FluentDataGrid>
+
+@code {
+  [Parameter]
+  public string? PersonId { get; set; }
+
+  [SupplyParameterFromForm]
+  private Person? person { get; set; } = new();
+
+  PaginationState pagination = new PaginationState { ItemsPerPage = Constants.PageSize };
+
+  protected override void OnInitialized()
+  {
+    LoadPerson();
+  }
+  void LoadPerson()
+  {
+    if (PersonId is null) return;
+
+    person = PersonService.Get(PersonId ?? "");
+  }
+  private async Task HandleValidSubmit()
+  {
+    if (string.IsNullOrEmpty(PersonId))
+    {
+      var newItem = await PersonService.AddAsync(person);
+      NavigationManager.NavigateTo($"/persons/{newItem.id}/edit");
+      ToastService.ShowSuccess("Person Added.");
+    }
+    else
+    {
+      await PersonService.UpdateAsync(person);
+      ToastService.ShowSuccess("Person updated.");
+    }
+  }
+  async Task DeleteAddress(Address context)
+  {
+    var dialog = await DialogService.ShowConfirmationAsync($"Do you want to DELETE {context.line1}?", "YES, I WANT TO DELETE", "No", "Delete Address");
+    var result = await dialog.Result;
+    if (!result.Cancelled)
+    {
+      await PersonService.UpdateAsync(person);
+      ToastService.ShowSuccess("Address deleted");
+      LoadPerson();
+    }
+  }
+}

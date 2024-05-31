@@ -11,9 +11,9 @@
 
 <FluentAnchor Href="/countries/new" Appearance="Appearance.Accent">Add New Country</FluentAnchor>
 
-<FluentDataGrid ItemsProvider="itemsProvider" Pagination="@pagination">
+<FluentDataGrid @ref="dataGrid" ItemsProvider="itemsProvider" Pagination="@pagination">
     <TemplateColumn Title="Name" Sortable="true">
-        <FluentAnchor Href=@($"/countries/{context.id}/edit") Appearance="Appearance.Hypertext">@context.name</FluentAnchor>
+        <FluentAnchor Href=@($"/countries/{context.id}/states") Appearance="Appearance.Hypertext">@context.name</FluentAnchor>
     </TemplateColumn>
   <PropertyColumn Title="Code" Property="@(p => p.code)" Sortable="true" />
   <TemplateColumn Title="Actions" Align="@Align.End">
@@ -27,30 +27,29 @@
 <FluentPaginator State="@pagination" />
 
 @code {
-  private List<Country>? countries;
-  private int countryCount;
-  private CountrySearchReq dto = new();
+  
   GridItemsProvider<Country>? itemsProvider;
+  FluentDataGrid<Country> dataGrid;
 
   PaginationState pagination = new PaginationState { ItemsPerPage = Constants.PageSize };
 
-  protected override async Task OnInitializedAsync()
+  protected override void OnInitialized()
+  {
+    InitGridItemsProvider();
+    
+  }
+  void InitGridItemsProvider()
   {
     itemsProvider = async req =>
     {
+      CountrySearchReq dto = new();
       dto.Skip = req.StartIndex;
       dto.Take = req.Count ?? Constants.PageSize;
       dto.SortOrder = req.SortByAscending ? Constants.Ascending : Constants.Descending;
       dto.OrderBy = req.SortByColumn?.Title;
-        SearchCountries();
-      return GridItemsProviderResult.From(countries, countryCount);
+      var res = CountryService.Search(dto);
+      return GridItemsProviderResult.From(res.Items, res.Count);
     };
-  }
-  private void SearchCountries()
-  {
-    var searchResults = CountryService.Search(dto);
-    countries = searchResults.Items;
-    countryCount = searchResults.Count;
   }
   async Task DeleteCountry(Country context)
   {
@@ -61,7 +60,7 @@
     {
       await CountryService.DeleteAsync(context);
       ToastService.ShowSuccess("Country deleted");
-      SearchCountries();
+      await dataGrid.RefreshDataAsync();
     }
   }
 }

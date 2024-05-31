@@ -75,6 +75,16 @@ namespace BlazorCountries.Services
         // Count before paging
         var count = queryable.Count();
 
+        // Sort
+        if (string.IsNullOrEmpty(dto.OrderBy))
+          queryable = queryable.OrderBy(x => x.firstName);
+        else if (dto.OrderBy.Equals("name", StringComparison.OrdinalIgnoreCase) && dto.SortOrder == Constants.Ascending)
+          queryable = queryable.OrderBy(x => x.firstName);
+        else if (dto.OrderBy.Equals("name", StringComparison.OrdinalIgnoreCase) && dto.SortOrder == Constants.Descending)
+          queryable = queryable.OrderByDescending(x => x.firstName);
+        else
+          queryable = queryable.OrderBy(x => x.firstName);
+
         // Get list after paging
         queryable = queryable
             .Skip(dto.Skip)

@@ -1,0 +1,66 @@
+﻿@page "/persons"
+@rendermode InteractiveServer
+@inject IPersonService PersonService
+@inject IDialogService DialogService
+@inject IToastService ToastService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Persons</PageTitle>
+
+<h1>Persons</h1>
+
+<FluentAnchor Href="/persons/new" Appearance="Appearance.Accent">Add New Person</FluentAnchor>
+
+<FluentDataGrid @ref="dataGrid" ItemsProvider="itemsProvider" Pagination="@pagination">
+  <TemplateColumn Title="Name" Sortable="true">
+    <FluentAnchor Href=@($"/persons/{context.id}/edit") Appearance="Appearance.Hypertext">@context.firstName @context.lastName</FluentAnchor>
+  </TemplateColumn>
+  <PropertyColumn Title="Phone" Property="@(p => p.phone)" Sortable="false" />
+  <PropertyColumn Title="Email" Property="@(p => p.email)" Sortable="false" />
+  <TemplateColumn Title="Actions" Align="@Align.End">
+    <FluentAnchor Href=@($"/persons/{context.id}/edit")>
+      <FluentIcon Value="@(new Icons.Regular.Size16.Edit())" />
+    </FluentAnchor>
+    <FluentButton IconEnd="@(new Icons.Regular.Size16.Delete())" OnClick="@((async) => DeletePerson(context))" Appearance="Appearance.Outline" />
+  </TemplateColumn>
+</FluentDataGrid>
+
+<FluentPaginator State="@pagination" />
+
+@code {
+
+  GridItemsProvider<Person>? itemsProvider;
+  FluentDataGrid<Person> dataGrid;
+
+  PaginationState pagination = new PaginationState { ItemsPerPage = Constants.PageSize };
+
+  protected override void OnInitialized()
+  {
+    InitGridItemsProvider();
+
+  }
+  void InitGridItemsProvider()
+  {
+    itemsProvider = async req =>
+    {
+      PersonSearchReq dto = new();
+      dto.Skip = req.StartIndex;
+      dto.Take = req.Count ?? Constants.PageSize;
+      dto.SortOrder = req.SortByAscending ? Constants.Ascending : Constants.Descending;
+      dto.OrderBy = req.SortByColumn?.Title;
+      var res = PersonService.Search(dto);
+      return GridItemsProviderResult.From(res.Items, res.Count);
+    };
+  }
+  async Task DeletePerson(Person context)
+  {
+    var dialog = await DialogService.ShowConfirmationAsync($"Do you want to DELETE {context.firstName} {context.lastName}?", "YES, I WANT TO DELETE", "No", "Delete Person");
+    var result = await dialog.Result;
+    if (!result.Cancelled)
+    {
+      await PersonService.DeleteAsync(context);
+      ToastService.ShowSuccess("Person deleted");
+      await dataGrid.RefreshDataAsync();
+    }
+  }
+}

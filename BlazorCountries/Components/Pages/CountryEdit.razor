@@ -5,7 +5,7 @@
 @inject IToastService ToastService
 @inject NavigationManager NavigationManager
 
-<PageTitle>Edit Country</PageTitle>
+<PageTitle>@(string.IsNullOrEmpty(CountryId) ? "Add New" : "Edit") Country</PageTitle>
 
 <h1>@(string.IsNullOrEmpty(CountryId) ? "Add New" : "Edit") Country</h1>
 
@@ -15,11 +15,11 @@
 
   <FluentStack Orientation="Orientation.Vertical">
     <div>
-      <FluentTextField Name="identifier" @bind-Value="country.code" Label="Code" Required />
+      <FluentTextField @bind-Value="country.code" Label="Code" Required />
       <FluentValidationMessage For="@(() => country.code)" />
     </div>
     <div>
-      <FluentTextField Name="name" @bind-Value="country.name" Label="Name" Required />
+      <FluentTextField @bind-Value="country.name" Label="Name" Required />
       <FluentValidationMessage For="@(() => country.name)" />
     </div>
     <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">Submit</FluentButton>

@@ -1,0 +1,75 @@
+﻿@page "/countries/{CountryId}/states"
+@rendermode InteractiveServer
+@inject ICountryService CountryService
+@inject IStateService StateService
+@inject IDialogService DialogService
+@inject IToastService ToastService
+@inject NavigationManager NavigationManager
+
+<PageTitle>States of @country?.name</PageTitle>
+
+<h1>States of @country?.name</h1>
+
+<FluentAnchor Href=@($"/countries/{CountryId}/states/new") Appearance="Appearance.Accent">Add New State</FluentAnchor>
+
+<FluentDataGrid @ref="dataGrid" ItemsProvider="itemsProvider" Pagination="@pagination">
+  <TemplateColumn Title="Name" Sortable="true">
+    <FluentAnchor Href=@($"/countries/{CountryId}/states/{context.id}/edit") Appearance="Appearance.Hypertext">@context.name</FluentAnchor>
+  </TemplateColumn>
+  <PropertyColumn Title="Code" Property="@(p => p.code)" Sortable="true" />
+  <TemplateColumn Title="Actions" Align="@Align.End">
+    <FluentAnchor Href=@($"/countries/{CountryId}/states/{context.id}/edit")>
+      <FluentIcon Value="@(new Icons.Regular.Size16.Edit())" />
+    </FluentAnchor>
+    <FluentButton IconEnd="@(new Icons.Regular.Size16.Delete())" OnClick="@((async) => DeleteState(context))" Appearance="Appearance.Outline" />
+  </TemplateColumn>
+</FluentDataGrid>
+
+<FluentPaginator State="@pagination" />
+
+@code {
+  [Parameter]
+  public string? CountryId { get; set; }
+
+  private Country? country;
+  GridItemsProvider<State>? itemsProvider;
+  FluentDataGrid<State> dataGrid;
+
+  PaginationState pagination = new PaginationState { ItemsPerPage = Constants.PageSize };
+
+  protected override void OnInitialized()
+  {
+    LoadCountry();
+    InitGridItemsProvider();
+  }
+  void LoadCountry()
+  {
+    country = CountryService.Get(CountryId ?? "");
+  }
+  void InitGridItemsProvider()
+  {
+    itemsProvider = async req =>
+    {
+      StateSearchReq dto = new();
+      dto.CountryId = CountryId ?? "";
+      dto.Skip = req.StartIndex;
+      dto.Take = req.Count ?? Constants.PageSize;
+      dto.SortOrder = req.SortByAscending ? Constants.Ascending : Constants.Descending;
+      dto.OrderBy = req.SortByColumn?.Title;
+      var res = StateService.Search(dto);
+      return GridItemsProviderResult.From(res.Items, res.Count);
+    };
+  }
+  async Task DeleteState(State context)
+  {
+    Console.WriteLine("Delete " + context.name);
+    var dialog = await DialogService.ShowConfirmationAsync($"Do you want to DELETE {context.name}?", "YES, I WANT TO DELETE", "No", "Delete State");
+    var result = await dialog.Result;
+    if (!result.Cancelled)
+    {
+      await StateService.DeleteAsync(context);
+      ToastService.ShowSuccess("State deleted");
+      await dataGrid.RefreshDataAsync();
+    }
+  }
+}

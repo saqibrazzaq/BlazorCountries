@@ -1,0 +1,71 @@
+﻿@page "/countries/{CountryId}/states/new"
+@page "/countries/{CountryId}/states/{StateId}/edit"
+@rendermode InteractiveServer
+@inject ICountryService CountryService
+@inject IStateService StateService
+@inject IToastService ToastService
+@inject NavigationManager NavigationManager
+
+<PageTitle>@(string.IsNullOrEmpty(StateId) ? "Add New" : "Edit") State</PageTitle>
+
+<h1>@(string.IsNullOrEmpty(StateId) ? "Add New" : "Edit") State</h1>
+
+<EditForm Model="@state" OnValidSubmit="@HandleValidSubmit" novalidate>
+  <DataAnnotationsValidator />
+  <FluentValidationSummary />
+
+  <FluentStack Orientation="Orientation.Vertical">
+    <div>
+      <FluentTextField @bind-Value="state.code" Label="Code" Required />
+      <FluentValidationMessage For="@(() => state.code)" />
+    </div>
+    <div>
+      <FluentTextField @bind-Value="state.name" Label="Name" Required />
+      <FluentValidationMessage For="@(() => state.name)" />
+    </div>
+    <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">Submit</FluentButton>
+  </FluentStack>
+</EditForm>
+
+@code {
+  [Parameter]
+  public string? CountryId { get; set; }
+  [Parameter]
+  public string? StateId { get; set; }
+  [SupplyParameterFromForm]
+  private State? state { get; set; } = new();
+
+  private Country? country;
+
+  protected override void OnInitialized()
+  {
+    LoadCountry();
+    LoadState();
+  }
+  void LoadCountry()
+  {
+    country = CountryService.Get(CountryId ?? "");
+  }
+  void LoadState()
+  {
+    if (StateId is null) return;
+
+    state = StateService.Get(StateId ?? "");
+  }
+  private async Task HandleValidSubmit()
+  {
+    state.countryId = country.id;
+    state.countryName = country.name;
+
+    if (string.IsNullOrEmpty(StateId))
+    {
+      var newItem = await StateService.AddAsync(state);
+    }
+    else
+    {
+      await StateService.UpdateAsync(state);
+    }
+    ToastService.ShowSuccess("State updated.");
+    NavigationManager.NavigateTo($"/countries/{CountryId}/states");
+  }
+}

@@ -1,0 +1,126 @@
+﻿@page "/persons/{PersonId}/addresses/new"
+@page "/persons/{PersonId}/addresses/{AddressId}/edit"
+@rendermode InteractiveServer
+@inject ICountryService CountryService
+@inject IStateService StateService
+@inject IPersonService PersonService
+@inject IToastService ToastService
+@inject NavigationManager NavigationManager
+
+<PageTitle>@(string.IsNullOrEmpty(AddressId) ? "Add New" : "Edit") Address</PageTitle>
+
+<h1>@(string.IsNullOrEmpty(AddressId) ? "Add New" : "Edit") Address</h1>
+
+<EditForm Model="@address" OnValidSubmit="@HandleValidSubmit" novalidate>
+  <DataAnnotationsValidator />
+  <FluentValidationSummary />
+
+  <FluentStack Orientation="Orientation.Vertical">
+    <div>
+      <FluentTextField @bind-Value="address.line1" Label="Line 1" />
+    </div>
+    <div>
+      <FluentTextField @bind-Value="address.line2" Label="Line 2" />
+    </div>
+    <FluentAutocomplete TOption="Country"
+                        AutoComplete="off"
+                        Width="250px"
+                        Label="Country"
+                        Placeholder="Select country"
+                        OnOptionsSearch="@OnCountrySearchAsync"
+                        OptionText="@(x => x.name)"
+                        OptionSelected="@(x => x.name == address.country)"
+                        @bind-SelectedOptions="@SelectedCountries"
+                        MaximumSelectedOptions="1"
+                        ValueChanged="@OnCountryChanged"/>
+    <FluentAutocomplete TOption="State"
+                        AutoComplete="off"
+                        Width="250px"
+                        Label="State"
+                        Placeholder="Select state"
+                        OnOptionsSearch="@OnStateSearchAsync"
+                        OptionText="@(x => x.name)"
+                        OptionSelected="@(x => x.name == address.state)"
+                        @bind-SelectedOptions="@SelectedStates"
+                        MaximumSelectedOptions="1" />
+    <FluentTextField @bind-Value="address.city" Label="City" />
+    <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">Submit</FluentButton>
+  </FluentStack>
+</EditForm>
+
+@code {
+  [Parameter]
+  public string? PersonId { get; set; }
+  [Parameter]
+  public string? AddressId { get; set; }
+  [SupplyParameterFromForm]
+  private Address? address { get; set; } = new();
+
+  IEnumerable<Country> SelectedCountries = Array.Empty<Country>();
+  IEnumerable<State> SelectedStates = Array.Empty<State>();
+  private Person? person;
+
+  protected override void OnInitialized()
+  {
+    LoadAddress();
+  }
+  void LoadAddress()
+  {
+    if (PersonId is null) return;
+
+    person = PersonService.Get(PersonId ?? "");
+
+    if (!string.IsNullOrEmpty(AddressId))
+    {
+      address = person.addresses.FirstOrDefault(
+        x => x.id == AddressId);
+
+      CountrySearchReq dtoCountry = new();
+      dtoCountry.Name = string.IsNullOrEmpty(address.country) ? "unknown" : address.country;
+      SelectedCountries = CountryService.Search(dtoCountry).Items;
+
+      StateSearchReq dtoState = new();
+      dtoState.CountryName = SelectedCountries.FirstOrDefault()?.name ?? "unknown";
+      dtoState.Name = string.IsNullOrEmpty(address.state) ? "unknown" : address.state;
+      SelectedStates = StateService.Search(dtoState).Items;
+    }
+  }
+  private void OnCountryChanged(string value)
+  {
+    Console.WriteLine("country changed: " + value);
+    SelectedStates = Array.Empty<State>();
+  }
+  private async Task OnCountrySearchAsync(OptionsSearchEventArgs<Country> e)
+  {
+    CountrySearchReq dto = new();
+    dto.Name = e.Text;
+    e.Items = CountryService.Search(dto).Items;
+  }
+  private async Task OnStateSearchAsync(OptionsSearchEventArgs<State> e)
+  {
+    StateSearchReq dto = new();
+    dto.CountryName = SelectedCountries.FirstOrDefault()?.name ?? "unknown";
+    dto.Name = e.Text;
+    e.Items = StateService.Search(dto).Items;
+  }
+  private async Task HandleValidSubmit()
+  {
+    address.country = SelectedCountries.FirstOrDefault()?.name ?? "";
+    address.state = SelectedStates.FirstOrDefault()?.name ?? "";
+
+    if (string.IsNullOrEmpty(AddressId))
+    {
+      person.addresses.Add(address);
+    }
+    else
+    {
+      var addressToUpdate = person?.addresses.FirstOrDefault(
+          x => x.id == address.id);
+      if (addressToUpdate is not null)
+        addressToUpdate = address;
+    }
+    await PersonService.UpdateAsync(person);
+    ToastService.ShowSuccess("Address updated.");
+    NavigationManager.NavigateTo($"/persons/{PersonId}/edit");
+  }
+}
